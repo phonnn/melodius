@@ -1,0 +1,25 @@
+{
+  "name": "nft-presale",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "_phonnn",
+  "license": "MIT",
+  "dependencies": {
+    "@nomiclabs/buidler": "^1.4.8",
+    "@nomiclabs/hardhat-ethers": "^2.0.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/contracts": "^4.4.1",
+    "@openzeppelin/test-helpers": "^0.5.15",
+    "ethers": "^5.5.2",
+    "hardhat": "^2.8.0",
+    "hardhat-gas-reporter": "^1.0.6",
+    "hardhat-log-remover": "^2.0.2",
+    "hardhat-tracer": "^1.0.0-alpha.6",
+    "process.argv": "^0.6.0",
+    "solidity-coverage": "^0.7.16"
+  },
+  "scripts": {
+    "test": "hardhat test test/presale.js --network hardhat",
+    "deploy": "hardhat run scripts/Presale.js --network"
+  }
+}
