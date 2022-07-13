@@ -14,36 +14,12 @@ describe("InitTest", async function () {
         presale = initial.Presale;
     });
 
-    it("setMinter test", async function () {
-        var pass = true
-        try {
-            // onlyOwner test
-            await spawner.connect(accounts[1]).setMinter(presale.address);
-            pass = false;
-            console.log("onlyOwner")
-        } catch (error) {
-            await spawner.setMinter(presale.address);
-            let minter = await spawner.minter();
-            
-            if(minter != presale.address){
-                pass = false;
-            }
-        }
-
-        if(!pass){
-            throw 'setMinter test Failed'
-        }
-    });
-
     it("setSaleEvent test", async function () {
         var pass = true
         let start = Math.floor(new Date().getTime() / 1000);
         let end = start + 3600;
         let price1 = 100;
         let price2 = 500;
-
-        // set minter
-        await spawner.setMinter(presale.address);
 
         try {
             // onlyMinter test
@@ -56,18 +32,17 @@ describe("InitTest", async function () {
             await presale.setSaleEvent(2, start, end, price2);
             // giá round 1 = 100e18
             // giá round 2 = 500e18
-
-            let round1_price = await spawner.prices(1);
-            let round2_price = await spawner.prices(2);
-            console.log("round1_price", round1_price)
-            console.log("round2_price", round2_price)
+            let round1 = await presale.getSaleEvent(1);
+            let round2 = await presale.getSaleEvent(2);
+            console.log(round1);
+            console.log(round2);
 
             // check xem giá round 1, round 2 có set đúng không
-            if(round1_price != price1 * 1e18){
+            if(round1.price != price1){
                 pass = false;
             }
             
-            if(round2_price != price2 * 1e18){
+            if(round2.price != price2){
                 pass = false;
             }
         }
@@ -111,24 +86,14 @@ describe("InitTest", async function () {
 
     it("Mint test", async function () {
         var pass = true
-        var listAddress = [];
 
-        // set minter
-        await spawner.setMinter(accounts[0].address);
-        
-        //set price
-        await spawner.setPrice(1, 100);
-
-        // add account 0-4 to presale list
-        for(let i = 0; i < 5; i++){
-            listAddress.push(accounts[i].address);
-        }
-
-        // onlyMinter test
+        // onlyOwner test
+        await spawner.transferOwnership(accounts[1].address)
         try {
-            await spawner.connect(accounts[1]).safeMint(accounts[1].address, 1, 1);
+            // owner hiện tại của contract spawner là accounts[1]
+            await spawner.safeMint(accounts[1].address);
             pass = false;
-            console.log("onlyMinter")
+            console.log("onlyOwner")
         } catch (error) {}
 
         // address 0 test
@@ -138,47 +103,15 @@ describe("InitTest", async function () {
             pass = false;
             console.log("Address(0)")
         } catch (error) {}
-
-        // amount 0 test
-        try {
-            //mint số lượng 0 => lỗi
-            await spawner.safeMint(accounts[1].address, 1, 0);
-            pass = false;
-            console.log("Amount = 0")
-        } catch (error) {}
         
-        // maxSupply mint test 
-        try {
-            // max nft = 10000
-            // mint số lượng vượt quá max supply => lỗi
-            await spawner.safeMint(accounts[0].address, 1, 10001);
-            pass = false;
-        } catch (error) {}
-
-        // check if round not set test
-        try {
-            // round 2 chưa được setup => giá round 2 = 0 => lỗi
-            await spawner.safeMint(accounts[1].address, 2, 1);
-            pass = false;
-            console.log("Round not set")
-        } catch (error) {}
-
         // mint test
-        await token.transfer(accounts[1].address, ethers.utils.parseEther('1000')); // 1000 token => max 10 nft
-        await token.connect(accounts[1]).approve(spawner.address, ethers.utils.parseEther('1000'));
+        // dùng accout 1 để mint
+        await spawner.connect(accounts[1]).safeMint(accounts[2].address);
+        let nft_bal = await spawner.balanceOf(accounts[2].address);
 
-        try {
-            // mua vượt quá balance
-            await spawner.safeMint(accounts[1].address, 1, 11);
+        if(nft_bal != 1){
             pass = false;
-        } catch (error) {
-            await spawner.safeMint(accounts[1].address, 1, 10);
-            let nft_bal = await spawner.balanceOf(accounts[1].address);
-
-            if(nft_bal != 10){
-                pass = false;
-            }  
-        }
+        }  
 
         if(!pass){
             throw 'Mint test test Failed'
@@ -194,8 +127,8 @@ describe("InitTest", async function () {
         let price1 = 100;
         let price2 = 500;
 
-        // set minter
-        await spawner.setMinter(presale.address);
+        // transferOwnership
+        await spawner.transferOwnership(presale.address)
 
         // set sale event
         await presale.setSaleEvent(1, start, end, price1);
@@ -212,7 +145,7 @@ describe("InitTest", async function () {
 
         // buy test
         await token.transfer(accounts[1].address, ethers.utils.parseEther('1000'));
-        await token.connect(accounts[1]).approve(spawner.address, ethers.utils.parseEther('1000'));
+        await token.connect(accounts[1]).approve(presale.address, ethers.utils.parseEther('1000'));
         
         try {
             // address not in whitelist
@@ -280,11 +213,12 @@ async function getInitialContracts() {
     const MockToken = await Mock.deploy(); 
 
     const _NFTSpawner = await ethers.getContractFactory("NFTSpawner");
-    const NFTSpawner = await _NFTSpawner.deploy("Test NFT", "NFT", MockToken.address);
+    const NFTSpawner = await _NFTSpawner.deploy("Test NFT", "NFT");
 
     const _Presale = await ethers.getContractFactory("Presale");
-    const Presale = await _Presale.deploy(NFTSpawner.address);
+    const Presale = await _Presale.deploy(NFTSpawner.address, MockToken.address);
     
+    // await NFTSpawner.transferOwnership(Presale.address)
     console.log('Deploy done');
     return { MockToken, NFTSpawner, Presale }
 }

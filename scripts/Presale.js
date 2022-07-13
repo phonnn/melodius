@@ -20,8 +20,7 @@ async function main(){
         'NFTSpawner',
         network.name,
         nftName,
-        nftSymbol,
-        USDT
+        nftSymbol
     );
 
     //Presale
@@ -29,10 +28,12 @@ async function main(){
         'Presale',
         'Presale',
         network.name,
-        Spawner.address
+        Spawner.address,
+        USDT
     );
-
-    await Spawner.setMinter(Presale.address);    
+    
+    // transferOwnership
+    await Spawner.transferOwnership(Presale.address)
 }
 main()
 	.then(() => process.exit(0))
