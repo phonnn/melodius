@@ -15,6 +15,7 @@
     "hardhat-gas-reporter": "^1.0.6",
     "hardhat-log-remover": "^2.0.2",
     "hardhat-tracer": "^1.0.0-alpha.6",
+    "mongoose": "^6.4.6",
     "process.argv": "^0.6.0",
     "solidity-coverage": "^0.7.16"
   },
