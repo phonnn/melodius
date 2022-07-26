@@ -4,6 +4,7 @@
   "main": "index.js",
   "author": "_phonnn",
   "license": "MIT",
+  "type": "module",
   "dependencies": {
     "@nomiclabs/buidler": "^1.4.8",
     "@nomiclabs/hardhat-ethers": "^2.0.3",

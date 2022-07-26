@@ -1,14 +1,13 @@
-import { Schema, model } from 'mongoose';
+import mongoose from 'mongoose';
+const { Schema, model } = mongoose;
 
 const raritySchema = new Schema({
-  name: { type: String, required: true },
-  min_attr: { type: Number, required: true },
-  max_attr: { type: Number, required: true },
-  attr_per_lv: { type: Number, required: true },
-  genesis_supply: { type: Number, required: true },
-  mint_cooldown: { type: Number, required: true },
-  age_to_mint: { type: Number, required: true },
-  energy_to_mint: { type: Number, required: true },
+    id: { type: Number, required: true }, //Common: 0, Uncommon: 1, Super Rare: 2, Unique: 3
+    name: { type: String, required: true },
+    min_attr: { type: Number, required: true },
+    max_attr: { type: Number, required: true },
+    attr_per_lv: { type: Number, required: true },
+    addition_stamina: { type: Number, required: true },
 });
 
 const Rarity = model('Rarity', raritySchema);
