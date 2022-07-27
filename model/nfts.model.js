@@ -6,10 +6,7 @@ const nftSchema = new Schema({
 	nft_type: { type: Number, required: true }, //box = 0, headphone = 1
     chain: { type: Number, required: true },
 
-    optimality: { type: Number},
-	luck: { type: Number},
-	comfort: { type: Number},
-	battery: { type: Number},
+    attributes: [{ type: Number}], //0: Optimality, 1: Luck, 2: Comfort, 3: Battery Capacity
 	level: { type: Number},
 	played_rounds: { type: Number},
 	breed_count: { type: Number},
