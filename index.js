@@ -43,7 +43,7 @@ var gemsModel3 = [];
 var blanksModel_1 = [];
 var blanksModel_2 = [];
 
-// data simulate
+// gems data per level simulate
 for (let i=0; i<6; i++){
     let newGemsLV = new GemsLV({
         level: i+1,
@@ -58,6 +58,7 @@ for (let i=0; i<6; i++){
 }
 
 for (let i=0; i<4; i++){
+    // nft type simulate
     let newType = new Types({
         id: i,
         name: types_data[i][0],
@@ -69,7 +70,8 @@ for (let i=0; i<4; i++){
         stamina_to_mint: types_data[i][6]
     });
     typesModel.push(newType);
-
+    
+    // nft rarity simulate
     let newRarity = new Rarity({
         id: i,
         name: rarity_data[i][0],
@@ -81,6 +83,7 @@ for (let i=0; i<4; i++){
 
     raritiesModel.push(newRarity);
 
+    // nft blanks simulate
     let newBlank_1 = new Blanks({
         type: randBetween(0, 3),
         gem: null,
@@ -95,6 +98,7 @@ for (let i=0; i<4; i++){
 
     blanksModel_2.push(newBlank_2);
 
+    // gems data simulate
     let gemLevel = randBetween(1, 6);
 
     let newGem1 = new Gems({
