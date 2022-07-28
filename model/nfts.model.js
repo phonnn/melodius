@@ -4,7 +4,9 @@ const { Schema, model } = mongoose;
 const nftSchema = new Schema({
 	id: { type: Number, required: true }, //nft id
 	nft_type: { type: Number, required: true }, //box = 0, headphone = 1
-    chain: { type: Number, required: true },
+    chainId: { type: Number, required: true },
+    owner: { type: Schema.Types.ObjectId, required: true },
+    onSale: { type: Boolean, required: true },
 
     attributes: [{ type: Number}], //0: Optimality, 1: Luck, 2: Comfort, 3: Battery Capacity
 	level: { type: Number},

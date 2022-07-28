@@ -6,7 +6,10 @@ import Types from './model/types.model.js';
 import Users from './model/users.model.js';
 import NFTs from './model/nfts.model.js';
 import Minting from './model/minting.model.js';
-import { randBetween, breed, openBox, addGem, gemUpgrade} from './nft_actions.js';
+import Listing from './model/listing.model.js';
+import Stamina from './model/stamina.model.js';
+
+import { randBetween, breed, openBox, addGem, removeGem, gemUpgrade, staminaUpgrade, listingItem, delistingItem, buyItem, listingModel } from './nft_actions.js';
 
 // const BREED_COST = [[120, 80], [240, 80], [360, 80],  [600, 80], [960, 80], [1560, 80], [2520, 80]]
 
@@ -33,7 +36,16 @@ var gems_data = [
     ['Radiant', 3, 1000, 400, 4300, 85], //simulate
 ];
 
+var stamina_data = [
+    [1, 4, 600000, 'Newbie'],
+    [3, 8, 1200000, 'Daily User'],
+    [9, 18, 2700000, 'Best Player'],
+    [15, 24, 3600000, 'Pro Player'],
+    [30, 40, 6000000, 'Super Player']
+];
 
+
+var usersModel = [];
 var typesModel = [];
 var raritiesModel = [];
 var gemsLvModel = [];
@@ -42,6 +54,79 @@ var gemsModel2 = [];
 var gemsModel3 = [];
 var blanksModel_1 = [];
 var blanksModel_2 = [];
+var staminaModel = [];
+var NFTsModel = [];
+
+// user simulate
+const user1 = new Users({
+    username: 'user1',
+    email: 'aaaa@gmail.com',
+    password: 'xxxx',
+    stamina: 0,
+    maxStamina: 0,
+    staminaRegen: 0,
+    maxMUSIC: 5,
+    headphones_count: 0,
+    stamina_spend: 0,
+    assets: [
+        {
+            chainId: 97,
+            token: 1,       //MUSIC token
+            value: 1000,
+        },
+        {
+            chainId: 97,
+            token: 0,       //MELO token
+            value: 1000,
+        }
+    ],
+    addresses: [{
+        chainId: 97,
+        address: 'address1',
+    }],
+});
+
+const user2 = new Users({
+    username: 'user2',
+    email: 'bbbb@gmail.com',
+    password: 'xxxx',
+    stamina: 0,
+    maxStamina: 0,
+    staminaRegen: 0,
+    maxMUSIC: 5,
+    headphones_count: 0,
+    stamina_spend: 0,
+    assets: [
+        {
+            chainId: 97,
+            token: 1,       //MUSIC token
+            value: 1000,
+        },
+        {
+            chainId: 97,
+            token: 0,       //MELO token
+            value: 1000,
+        }
+    ],
+    addresses: [{
+        chainId: 97,
+        address: 'address2',
+    }],
+});
+
+usersModel.push(user1);
+usersModel.push(user2);
+
+// stamina data per level simulate
+for (let i=0; i<5; i++){
+    let newStaminaLV = new Stamina({
+        headphones_own: stamina_data[i][0],
+        stamina: stamina_data[i][1],
+        regen: stamina_data[i][2],
+        note: stamina_data[i][3],
+    });
+    staminaModel.push(newStaminaLV);
+}
 
 // gems data per level simulate
 for (let i=0; i<6; i++){
@@ -86,14 +171,14 @@ for (let i=0; i<4; i++){
     // nft blanks simulate
     let newBlank_1 = new Blanks({
         type: randBetween(0, 3),
-        gem: null,
+        gem: undefined,
     });
 
     blanksModel_1.push(newBlank_1);
 
     let newBlank_2 = new Blanks({
         type: randBetween(0, 3),
-        gem: null,
+        gem: undefined,
     });
 
     blanksModel_2.push(newBlank_2);
@@ -102,25 +187,31 @@ for (let i=0; i<4; i++){
     let gemLevel = randBetween(1, 6);
 
     let newGem1 = new Gems({
-        id: i + randBetween(1, 1000),
         type: i,
-        isUsed: false,
+        chainId: 97,
+        owner: user1._id,
+        useOn: undefined,
+        onSale: false,
         attributes: gemsLvModel[gemLevel-1],
         awakening_points: 0,
     });
 
     let newGem2 = new Gems({
-        id: i + randBetween(1, 1000),
         type: i,
-        isUsed: false,
+        chainId: 97,
+        owner: user1._id,
+        useOn: undefined,
+        onSale: false,
         attributes: gemsLvModel[gemLevel-1],
         awakening_points: 0,
     });
 
     let newGem3 = new Gems({
-        id: i + randBetween(1, 1000),
-        type: i,
-        isUsed: false,
+        type: i, 
+        chainId: 97,
+        owner: user1._id,
+        useOn: undefined,
+        onSale: false,
         attributes: gemsLvModel[gemLevel-1],
         awakening_points: 0,
     });
@@ -130,83 +221,123 @@ for (let i=0; i<4; i++){
     gemsModel3.push(newGem3);
 }
 
-const headphone1 = new NFTs({
-	id: 1,
-	nft_type: 1,
-    chain: 97,
-    attributes:[15, 25, 19, 30],
-	level: 1,
-	played_rounds: 1,
-	breed_count: 0,
-	last_breed: 0,
-	lv_up_cooldown: 0,
-	last_lv_up: 0,
+// 10 genesis box simulate
+for (let i=0; i<10; i++){
+    let boxType = randBetween(0, 3);
+    let boxRarity = randBetween(0, 3);
+    let user_index = randBetween(0, 1);
+    
+    var blankSlot = [];
+    for(let i=0; i<4; i++){
+        let blankType = randBetween(0, 3);
 
-    rarity: raritiesModel[2],
-	blank_slot: blanksModel_1,
-	type: typesModel[1],
-});
+        blankSlot[i] = new Blanks({
+            type: blankType,
+            gem: undefined,
+        });
+    }
 
-const headphone2 = new NFTs({
-	id: 2,
-	nft_type: 1,
-    chain: 97,
-    attributes:[4, 8, 10, 2],
-	level: 1,
-	played_rounds: 1,
-	breed_count: 0,
-	last_breed: 0,
-	lv_up_cooldown: 0,
-	last_lv_up: 0,
+    // create genesis box
+    let newBox = new NFTs({
+        id: i,
+        nft_type: 0,
+        owner: usersModel[user_index]._id,
+        onSale: false,
+        chainId: 97,
+        rarity: raritiesModel[boxRarity],
+        type: typesModel[boxType],
+        blank_slot: blankSlot,
+    });
 
-    rarity: raritiesModel[0],
-	blank_slot: blanksModel_2,
-	type: typesModel[2],
-});
+    // add nft data into simulate database
+    NFTsModel.push(newBox);
 
+    //open genesis box
+    openBox(usersModel[user_index], newBox);
+}
 
-// console.log("NFT1", headphone1)
-// console.log()
-// console.log("NFT2", headphone2)
-// console.log()
+var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 1);
 
-// // breed with headphone1 and headphone2
-// var newBox = breed(headphone1, headphone2);
+///////////////////////////////////////
+// // breed with 2 user1's headphone
+// var newBox = breed(user1, user1HP[0], user1HP[1]);
 // console.log("box", newBox)
 // console.log()
 
+
+
+
+///////////////////////////////////////
 // // open box
-// var newHeadphone = openBox(newBox);
+// var newHeadphone = openBox(user1, newBox);
 // console.log("headphone", newHeadphone)
 // console.log() 
 
-// add gem
-console.log("headphone", headphone1)
-console.log();
 
-var gemType = headphone1.blank_slot[0].type;
 
-console.log("gem", gemsModel1[gemType])
+
+///////////////////////////////////////
+// // add gem
+// console.log("headphone", user1HP[0])
+// console.log();
+
+// var gemType = user1HP[0].blank_slot[0].type;
+
+// console.log("gem", gemsModel1[gemType])
+// console.log()
+
+// addGem(user1, user1HP[0], gemsModel1[gemType], 0)
+// console.log("NFT1_blank after add gems", user1HP[0].blank_slot)
+// console.log()
+
+
+
+
+///////////////////////////////////////
+// // remove gem
+// removeGem(user1, user1HP[0], gemsModel1[gemType], 0)
+
+// // gem upgrade
+// console.log("gem 1", gemsModel1[gemType])
+// console.log("gem 2", gemsModel2[gemType])
+// console.log("gem 3", gemsModel3[gemType])
+// console.log();
+
+// try {
+//     gemUpgrade(user1, gemsModel1[gemType], gemsModel2[gemType], gemsModel3[gemType])
+//     console.log("gem 1 after upgrade", gemsModel1[gemType])
+//     console.log("gem 2 after upgrade", gemsModel2[gemType])
+//     console.log("gem 3 after upgrade", gemsModel3[gemType])
+// } catch (error) {
+//     console.log(error)
+// }
+
+
+
+
+///////////////////////////////////////
+// listing item
+// var item = user1HP[0];
+var item = gemsModel1[1];
+console.log("item before listing", item)
+console.log()
+listingItem(user1, item, 100);
+var listingInfo = listingModel.find(obj => obj.item._id == item._id);
+
+console.log("item after listing", item)
 console.log()
 
-addGem(headphone1, gemsModel1[gemType], 0)
-console.log("NFT1_blank after add gems", headphone1.blank_slot)
+// // de-listing item
+// delistingItem(user1, item);
+// console.log("item after de-listing", item)
+// console.log()
+
+// buy item
+buyItem(user2, item);
+console.log("item after buy", item)
 console.log()
 
-// gem upgrade
-console.log("gem 1", gemsModel1[gemType])
-console.log("gem 2", gemsModel2[gemType])
-console.log("gem 3", gemsModel3[gemType])
-console.log();
-
-try {
-    gemUpgrade(gemsModel1[gemType], gemsModel2[gemType], gemsModel3[gemType])
-    console.log("gem 1 after upgrade", gemsModel1[gemType])
-    console.log("gem 2 after upgrade", gemsModel2[gemType])
-    console.log("gem 3 after upgrade", gemsModel3[gemType])
-} catch (error) {
-    console.log(error)
-}
 
 
-export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel }
+
+export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel, usersModel }

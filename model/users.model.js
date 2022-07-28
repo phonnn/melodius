@@ -7,16 +7,18 @@ const userSchema = new Schema({
     password: { type: String, required: true },
     stamina: { type: Number, required: true },
     maxStamina: { type: Number, required: true },
+    staminaRegen: { type: Number, required: true },
+    stamina_spend: { type: Number, required: true },
+    last_stamina_spend: { type: Number, required: true },
     maxMUSIC: { type: Number, required: true },
     headphones_count: { type: Number, required: true },
-    stamina_spend: { type: Number, required: true },
     assets: [{
-        chain: { type: Number, required: true },
-        token: { type: Number, required: true },
+        chainId: { type: Number, required: true },
+        token: { type: Number, required: true }, // MELO: 0, MUSIC: 1
         value: { type: Number, required: true },
     }],
     addresses: [{
-        chain: { type: Number, required: true },
+        chainId: { type: Number, required: true },
         address: { type: String, required: true },
     }],
 }, {
