@@ -7,7 +7,7 @@ const gemsSchema = new Schema({
     owner: { type: Schema.Types.ObjectId, required: true },
     useOn: { type: Number, required: true },
     onSale: { type: Boolean, required: true },
-    attributes: {type: Schema.Types.ObjectId, ref: 'GemsLV', required: true },
+    attributes: { type: Schema.Types.ObjectId, ref: 'GemsLV', required: true },
     awakening_points: { type: Number, required: true },
 });
 

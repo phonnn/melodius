@@ -1,9 +1,14 @@
-import { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel, usersModel } from './index.js'
+import { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel } from './index.js'
 import NFTs from './model/nfts.model.js';
 import Blanks from './model/blanks.model.js';
 import Listing from './model/listing.model.js';
+import Code from './model/refcode.model.js';
+import Users from './model/users.model.js';
 
+// simulated database
 var listingModel = [];
+var refCodesModel = [];
+var usersModel = [];
 
 function randBetween(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -25,6 +30,25 @@ function randomGenerator(percentage1, percentage2, percentage3, percentage4) {
         return 2
     else if (randomNumber < percentage1 + percentage2 + percentage3 + percentage4)
         return 3
+}
+
+function codeGenerator(length) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var result = '';
+    var charactersLength = characters.length;
+    while (1) {
+        for (var i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+
+        // check if code not in database
+        let check = refCodesModel.find(obj => obj.code == result);
+        if (check == undefined) {
+            break;
+        }
+    }
+
+    return result;
 }
 
 function openBox(user, boxNFT) {
@@ -224,6 +248,7 @@ function breed(user, parentNFT_1, parentNFT_2) {
 
     //mint new nft and get it's id from blockchain
     let nft_id = randBetween(1000, 10000) // simulation id
+    ////////////////////////////////////////////////
 
     var newBox = new NFTs({
         id: nft_id,
@@ -313,7 +338,7 @@ function gemUpgrade(user, gem1, gem2, gem3) { // upgrade gems1 and burn gem2, ge
     if (gem1.onSale || gem2.onSale || gem3.onSale) {
         throw "Gem is on sale";
     }
-    
+
     if (gem1.attributes.level >= 6) {
         throw "Gems at max level";
     }
@@ -366,7 +391,7 @@ function staminaUpgrade(user) {
     user.staminaRegen = maxStaminaData.regen;
 }
 
-function listingItem(seller, item, price){
+function listingItem(seller, item, price) {
     if (seller._id != item.owner) {
         throw "Not Owner";
     }
@@ -383,7 +408,7 @@ function listingItem(seller, item, price){
         throw "Price Error";
     }
 
-    if(item.nft_type != undefined){ // box or headphone
+    if (item.nft_type != undefined) { // box or headphone
         // on-chain transfer nft logic here
     }
 
@@ -402,7 +427,7 @@ function listingItem(seller, item, price){
     staminaUpgrade(seller);
 }
 
-function delistingItem(seller, item){
+function delistingItem(seller, item) {
     if (seller._id != item.owner) {
         throw "Not Owner";
     }
@@ -411,7 +436,7 @@ function delistingItem(seller, item){
         throw "Item not sale";
     }
 
-    if(item.nft_type != undefined){ // box or headphone
+    if (item.nft_type != undefined) { // box or headphone
         // on-chain transfer nft logic here
     }
 
@@ -419,7 +444,7 @@ function delistingItem(seller, item){
 
     // find listing info of item in database
     let listingInfo = listingModel.find(obj => obj.item._id == item._id); // simulate
-    
+
     // remove listing
     listingModel.splice(listingModel.indexOf(listingInfo), 1); // simulate
 
@@ -427,7 +452,7 @@ function delistingItem(seller, item){
     staminaUpgrade(seller);
 }
 
-function buyItem(buyer, item){
+function buyItem(buyer, item) {
     if (!item.onSale) {
         throw "Item not sale";
     }
@@ -443,7 +468,7 @@ function buyItem(buyer, item){
     if (buyerMUSIC.value < listingInfo.price) {
         throw "Not enough token";
     }
-    
+
     if (buyer._id == seller._id) {
         throw "Buy Error";
     }
@@ -451,7 +476,7 @@ function buyItem(buyer, item){
     // balance transfer
     buyer.assets[buyer.assets.indexOf(buyerMUSIC)].value -= listingInfo.price;
     seller.assets[seller.assets.indexOf(sellerMUSIC)].value += (listingInfo.price * 0.98); // 2% fee
-    
+
     // item owner transfer
     item.owner = buyer._id;
     item.onSale = false;
@@ -463,13 +488,209 @@ function buyItem(buyer, item){
     // remove listing
     listingModel.splice(listingModel.indexOf(listingInfo), 1); // simulate
 
-    if(item.nft_type != undefined){ // box or headphone
+    if (item.nft_type != undefined) { // box or headphone
         // on-chain transfer nft logic here
     }
 
 }
 
-export { randBetween, breed, openBox, addGem, removeGem, gemUpgrade, staminaUpgrade, listingItem, delistingItem, buyItem, listingModel }
+function renewCode(user) {
+    if (user.staminaSpend >= 10) {
+        if (user.refCode != undefined && user.refCode.isUsed) {
+            // search old code in simulate database
+            let oldCodeIndex = refCodesModel.findIndex(obj => obj.code == user.refCode.code);
+
+            // generate new code
+            let newCode = new Code({
+                code: codeGenerator(6),
+                owner: user._id,
+                isUsed: false,
+            });
+
+            // add code into simulate database
+            refCodesModel.push(newCode);
+
+            // delete old code in simulate database
+            refCodesModel.splice(oldCodeIndex, 1);
+
+            user.refCode = newCode;
+            user.staminaSpend -= 10;
+        } else {
+            // generate new code
+            let newCode = new Code({
+                code: codeGenerator(6),
+                owner: user._id,
+                isUsed: false,
+            });
+
+            user.staminaSpend -= 10;
+            user.refCode = newCode;
+            refCodesModel.push(newCode);
+        }
+    }
+}
+
+function clearUsedCode(user) {
+    if (user.role != 0) {
+        throw "Not Admins";
+    }
+    let usedCode = refCodesModel.filter(obj => obj.owner == user._id && obj.isUsed);
+
+    for (let code of usedCode) {
+        refCodesModel.splice(refCodesModel.indexOf(code), 1);
+    }
+}
+
+function renewCodeAdmin(user, amount) {
+    if (user.role != 0) {
+        throw "Not Admins";
+    }
+
+    var result = [];
+
+    for (let i = 0; i < amount; i++) {
+        // generate new code
+        var newCode = new Code({
+            code: codeGenerator(6),
+            owner: user._id,
+            isUsed: false,
+        });
+
+        // add code into simulate database
+        refCodesModel.push(newCode);
+    }
+
+    return result
+}
+
+function accountCreate(username, password, email, code) {
+    let usernameCheck = usersModel.findIndex(obj => obj.username == username);
+    let emailCheck = usersModel.findIndex(obj => obj.email == email);
+    let codeCheck = refCodesModel.findIndex(obj => obj.code == code);
+
+    if (usernameCheck != -1) {
+        throw "username has been exist";
+    }
+
+    if (emailCheck != -1) {
+        throw "email has been exist";
+    }
+
+    if (codeCheck == -1) {
+        throw "code not exist";
+    }
+
+    if (refCodesModel[codeCheck].isUsed) {
+        throw "code has been used";
+    }
+
+    // change code status to used
+    refCodesModel[codeCheck].isUsed = true;
+
+    let newUser = new Users({
+        username: username,
+        email: email,
+        password: password,
+        role: 1,
+        stamina: 0,
+        maxStamina: 0,
+        staminaRegen: 0,
+        maxMUSIC: 5,
+        headphones_count: 0,
+        staminaSpend: 0,
+        assets: [],
+        addresses: [],
+        referrer: refCodesModel[codeCheck].owner,
+    });
+
+    usersModel.push(newUser)
+    return newUser
+}
+
+function addAddress(userId, address, chainId) {
+    let userCheck = usersModel.findIndex(obj => obj._id == userId);
+
+    if (userCheck == -1) {
+        throw "user not exist";
+    }
+
+    let addressIndex = usersModel[userCheck].addresses.findIndex(obj => obj.chainId == chainId);
+
+    // edit address
+    if (addressIndex != -1) {
+        usersModel[userCheck].addresses[addressIndex].address = address;
+    } else {
+        usersModel[userCheck].addresses.push({
+            chainId: chainId,
+            address: address,
+        });
+    }
+
+    // get address's token info from blockchain
+    // simulation info
+    let melo_info = {
+        chainId: chainId,
+        token: 0, // MELO
+        value: 1000,
+    }
+    let music_info = {
+        chainId: chainId,
+        token: 1, // MUSIC
+        value: 1000,
+    }
+    ////////////////////////////////////////////////
+
+    // edit melo token info
+    let token0Index = usersModel[userCheck].assets.findIndex(obj => obj.chainId == chainId && obj.token == 0);
+
+    if (token0Index != -1) {
+        usersModel[userCheck].assets[token0Index].value = melo_info.value;
+    } else {
+        usersModel[userCheck].assets.push(melo_info);
+    }
+
+    // edit music token info
+    let token1Index = usersModel[userCheck].assets.findIndex(obj => obj.chainId == chainId && obj.token == 1);
+    if (token1Index != -1) {
+        usersModel[userCheck].assets[token1Index].value = music_info.value;
+    } else {
+        usersModel[userCheck].assets.push(music_info);
+    }
+}
+
+function set2FA(userId, _2fa=undefined) {
+    let userCheck = usersModel.findIndex(obj => obj._id == userId);
+
+    if (userCheck == -1) {
+        throw "user not exist";
+    }
+
+    usersModel[userCheck]._2fa = _2fa;
+}
+// if(user._2fa != undefined && user._2fa != _2fa){
+//     throw "Invalid 2FA"
+// }
+
+export {
+    randBetween,
+    breed,
+    openBox,
+    addGem,
+    removeGem,
+    gemUpgrade,
+    staminaUpgrade,
+    listingItem,
+    delistingItem,
+    buyItem,
+    renewCode,
+    renewCodeAdmin,
+    accountCreate,
+    clearUsedCode,
+    addAddress,
+    usersModel,
+    refCodesModel,
+    listingModel
+}
 
 
 

@@ -16,8 +16,8 @@ const nftSchema = new Schema({
 	lv_up_cooldown: { type: Number},
 	last_lv_up: { type: Number},
 
-    rarity: {type: Schema.Types.ObjectId, ref: 'Rarity', required: true },
-    type: {type: Schema.Types.ObjectId, ref: 'Types', required: true},
+    rarity: { type: Schema.Types.ObjectId, ref: 'Rarity', required: true },
+    type: { type: Schema.Types.ObjectId, ref: 'Types', required: true },
 	blank_slot: [{type: Schema.Types.ObjectId, ref: 'Blanks'}],
 }, {
   	timestamps: true,

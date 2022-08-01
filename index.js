@@ -9,7 +9,25 @@ import Minting from './model/minting.model.js';
 import Listing from './model/listing.model.js';
 import Stamina from './model/stamina.model.js';
 
-import { randBetween, breed, openBox, addGem, removeGem, gemUpgrade, staminaUpgrade, listingItem, delistingItem, buyItem, listingModel } from './nft_actions.js';
+import { 
+    randBetween, 
+    breed, 
+    openBox, 
+    addGem, 
+    removeGem, 
+    gemUpgrade, 
+    staminaUpgrade, 
+    listingItem, 
+    delistingItem, 
+    buyItem, 
+    renewCode, 
+    renewCodeAdmin, 
+    accountCreate, 
+    clearUsedCode, 
+    addAddress,
+    set2FA
+} from './nft_actions.js';
+import { usersModel, listingModel, refCodesModel } from './nft_actions.js';
 
 // const BREED_COST = [[120, 80], [240, 80], [360, 80],  [600, 80], [960, 80], [1560, 80], [2520, 80]]
 
@@ -44,8 +62,7 @@ var stamina_data = [
     [30, 40, 6000000, 'Super Player']
 ];
 
-
-var usersModel = [];
+// simulated database
 var typesModel = [];
 var raritiesModel = [];
 var gemsLvModel = [];
@@ -57,17 +74,19 @@ var blanksModel_2 = [];
 var staminaModel = [];
 var NFTsModel = [];
 
+
 // user simulate
-const user1 = new Users({
-    username: 'user1',
-    email: 'aaaa@gmail.com',
+const admin = new Users({
+    username: 'admin',
+    email: 'admin@gmail.com',
     password: 'xxxx',
+    role: 0,
     stamina: 0,
     maxStamina: 0,
     staminaRegen: 0,
     maxMUSIC: 5,
     headphones_count: 0,
-    stamina_spend: 0,
+    staminaSpend: 0,
     assets: [
         {
             chainId: 97,
@@ -82,40 +101,55 @@ const user1 = new Users({
     ],
     addresses: [{
         chainId: 97,
-        address: 'address1',
+        address: 'address0',
     }],
+    referrer: null,
 });
+usersModel.push(admin);
 
-const user2 = new Users({
-    username: 'user2',
-    email: 'bbbb@gmail.com',
-    password: 'xxxx',
-    stamina: 0,
-    maxStamina: 0,
-    staminaRegen: 0,
-    maxMUSIC: 5,
-    headphones_count: 0,
-    stamina_spend: 0,
-    assets: [
-        {
-            chainId: 97,
-            token: 1,       //MUSIC token
-            value: 1000,
-        },
-        {
-            chainId: 97,
-            token: 0,       //MELO token
-            value: 1000,
-        }
-    ],
-    addresses: [{
-        chainId: 97,
-        address: 'address2',
-    }],
-});
 
-usersModel.push(user1);
-usersModel.push(user2);
+///////////////////////////////////////
+// account create
+// console.log(refCodesModel);
+// console.log()
+renewCodeAdmin(admin, 3);
+
+var user1 = accountCreate('user1', 'xxxx', 'user1@gmail.com', refCodesModel[0].code);
+var user2 = accountCreate('user2', 'xxxx', 'user2@gmail.com', refCodesModel[1].code);
+
+// console.log(refCodesModel);
+// console.log()
+
+clearUsedCode(admin)
+// console.log(refCodesModel);
+// console.log()
+
+addAddress(user1._id, 'address1', 97);
+addAddress(user2._id, 'address2', 56);
+// console.log(usersModel);
+// console.log()
+
+
+
+/////////////////////////////////////////
+// // acctivation code
+// user1.staminaSpend = 15 // simulate
+// renewCode(user1);
+// renewCode(user2);
+// console.log(user1);
+// console.log()
+// console.log(user2);
+// console.log()
+// console.log(refCodesModel);
+
+
+
+/////////////////////////////////////////
+// // set 2fa
+// set2FA(user1._id, 'dfg98');
+// console.log(user1);
+// console.log()
+
 
 // stamina data per level simulate
 for (let i=0; i<5; i++){
@@ -128,7 +162,7 @@ for (let i=0; i<5; i++){
     staminaModel.push(newStaminaLV);
 }
 
-// gems data per level simulate
+// gems level data simulate
 for (let i=0; i<6; i++){
     let newGemsLV = new GemsLV({
         level: i+1,
@@ -209,7 +243,7 @@ for (let i=0; i<4; i++){
     let newGem3 = new Gems({
         type: i, 
         chainId: 97,
-        owner: user1._id,
+        owner: admin._id,
         useOn: undefined,
         onSale: false,
         attributes: gemsLvModel[gemLevel-1],
@@ -256,11 +290,12 @@ for (let i=0; i<10; i++){
     openBox(usersModel[user_index], newBox);
 }
 
-var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 1);
+var adminHP = NFTsModel.filter(obj => obj.owner == admin._id && obj.nft_type == 1);
+
 
 ///////////////////////////////////////
-// // breed with 2 user1's headphone
-// var newBox = breed(user1, user1HP[0], user1HP[1]);
+// // breed with 2 admin's headphone
+// var newBox = breed(admin, adminHP[0], adminHP[1]);
 // console.log("box", newBox)
 // console.log()
 
@@ -269,7 +304,7 @@ var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 
 
 ///////////////////////////////////////
 // // open box
-// var newHeadphone = openBox(user1, newBox);
+// var newHeadphone = openBox(admin, newBox);
 // console.log("headphone", newHeadphone)
 // console.log() 
 
@@ -278,16 +313,16 @@ var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 
 
 ///////////////////////////////////////
 // // add gem
-// console.log("headphone", user1HP[0])
+// console.log("headphone", adminHP[0])
 // console.log();
 
-// var gemType = user1HP[0].blank_slot[0].type;
+// var gemType = adminHP[0].blank_slot[0].type;
 
 // console.log("gem", gemsModel1[gemType])
 // console.log()
 
-// addGem(user1, user1HP[0], gemsModel1[gemType], 0)
-// console.log("NFT1_blank after add gems", user1HP[0].blank_slot)
+// addGem(admin, adminHP[0], gemsModel1[gemType], 0)
+// console.log("NFT1_blank after add gems", adminHP[0].blank_slot)
 // console.log()
 
 
@@ -295,7 +330,7 @@ var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 
 
 ///////////////////////////////////////
 // // remove gem
-// removeGem(user1, user1HP[0], gemsModel1[gemType], 0)
+// removeGem(admin, adminHP[0], gemsModel1[gemType], 0)
 
 // // gem upgrade
 // console.log("gem 1", gemsModel1[gemType])
@@ -304,7 +339,7 @@ var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 
 // console.log();
 
 // try {
-//     gemUpgrade(user1, gemsModel1[gemType], gemsModel2[gemType], gemsModel3[gemType])
+//     gemUpgrade(admin, gemsModel1[gemType], gemsModel2[gemType], gemsModel3[gemType])
 //     console.log("gem 1 after upgrade", gemsModel1[gemType])
 //     console.log("gem 2 after upgrade", gemsModel2[gemType])
 //     console.log("gem 3 after upgrade", gemsModel3[gemType])
@@ -316,28 +351,39 @@ var user1HP = NFTsModel.filter(obj => obj.owner == user1._id && obj.nft_type == 
 
 
 ///////////////////////////////////////
-// listing item
-// var item = user1HP[0];
-var item = gemsModel1[1];
-console.log("item before listing", item)
-console.log()
-listingItem(user1, item, 100);
-var listingInfo = listingModel.find(obj => obj.item._id == item._id);
+// // listing item
+// var item = adminHP[0];  //nft
+// // var item = gemsModel1[1];    //gem
+// console.log("item before listing", item)
+// console.log()
+// console.log("admin before listing", admin)
+// console.log()
 
-console.log("item after listing", item)
-console.log()
+// listingItem(admin, item, 100);
+// var listingInfo = listingModel.find(obj => obj.item._id == item._id);
+
+// console.log("item after listing", item)
+// console.log()
+// console.log("admin after listing", admin)
+// console.log()
 
 // // de-listing item
-// delistingItem(user1, item);
+// delistingItem(admin, item);
 // console.log("item after de-listing", item)
 // console.log()
 
-// buy item
-buyItem(user2, item);
-console.log("item after buy", item)
-console.log()
+// // buy item
+// buyItem(user1, item);
+// console.log("item after buy", item)
+// console.log()
+
+// console.log("admin after buy", admin)
+// console.log()
+// console.log("user1 after buy", user1)
+// console.log()
 
 
 
 
-export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel, usersModel }
+
+export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel }
