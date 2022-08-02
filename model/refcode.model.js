@@ -3,7 +3,7 @@ const { Schema, model } = mongoose;
 
 const codeSchema = new Schema({
     code: { type: String, required: true },
-    owner: { type: Schema.Types.ObjectId, require: true},
+    owner: { type: Schema.Types.ObjectId, ref: 'Users', required: true },
     isUsed: { type: Boolean, required: true },
 });
 

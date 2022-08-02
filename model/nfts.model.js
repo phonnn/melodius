@@ -5,7 +5,7 @@ const nftSchema = new Schema({
 	id: { type: Number, required: true }, //nft id
 	nft_type: { type: Number, required: true }, //box = 0, headphone = 1
     chainId: { type: Number, required: true },
-    owner: { type: Schema.Types.ObjectId, required: true },
+    owner: { type: Schema.Types.ObjectId, ref: 'Users', required: true },
     onSale: { type: Boolean, required: true },
 
     attributes: [{ type: Number}], //0: Optimality, 1: Luck, 2: Comfort, 3: Battery Capacity

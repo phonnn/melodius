@@ -1,3 +1,5 @@
+import { authenticator } from 'otplib';
+
 import Gems from './model/gems.model.js';
 import GemsLV from './model/gemslv.model.js';
 import Blanks from './model/blanks.model.js';
@@ -8,6 +10,7 @@ import NFTs from './model/nfts.model.js';
 import Minting from './model/minting.model.js';
 import Listing from './model/listing.model.js';
 import Stamina from './model/stamina.model.js';
+import Fees from './model/fees.model.js';
 
 import { 
     randBetween, 
@@ -24,8 +27,13 @@ import {
     renewCodeAdmin, 
     accountCreate, 
     clearUsedCode, 
-    addAddress,
-    set2FA
+    addWallet,
+    enable2FA,
+    disable2FA,
+    tokenDeposit,
+    tokenWithdraw,
+    nftDeposit,
+    nftWithdraw,
 } from './nft_actions.js';
 import { usersModel, listingModel, refCodesModel } from './nft_actions.js';
 
@@ -62,6 +70,12 @@ var stamina_data = [
     [30, 40, 6000000, 'Super Player']
 ];
 
+var fee_data = [
+    ['Marketplace Trading Fee', 2],
+    ['Marketplace Royalty Fee', 4],
+    ['Headphones Minting', 6],
+]
+
 // simulated database
 var typesModel = [];
 var raritiesModel = [];
@@ -73,6 +87,7 @@ var blanksModel_1 = [];
 var blanksModel_2 = [];
 var staminaModel = [];
 var NFTsModel = [];
+var feesModel = [];
 
 
 // user simulate
@@ -87,22 +102,8 @@ const admin = new Users({
     maxMUSIC: 5,
     headphones_count: 0,
     staminaSpend: 0,
-    assets: [
-        {
-            chainId: 97,
-            token: 1,       //MUSIC token
-            value: 1000,
-        },
-        {
-            chainId: 97,
-            token: 0,       //MELO token
-            value: 1000,
-        }
-    ],
-    addresses: [{
-        chainId: 97,
-        address: 'address0',
-    }],
+    assets: [],
+    wallets: [],
     referrer: null,
 });
 usersModel.push(admin);
@@ -124,31 +125,12 @@ clearUsedCode(admin)
 // console.log(refCodesModel);
 // console.log()
 
-addAddress(user1._id, 'address1', 97);
-addAddress(user2._id, 'address2', 56);
+addWallet(admin, 'address0', 97);
+addWallet(user1, 'address1', 97);
+addWallet(user2, 'address2', 97);
 // console.log(usersModel);
 // console.log()
 
-
-
-/////////////////////////////////////////
-// // acctivation code
-// user1.staminaSpend = 15 // simulate
-// renewCode(user1);
-// renewCode(user2);
-// console.log(user1);
-// console.log()
-// console.log(user2);
-// console.log()
-// console.log(refCodesModel);
-
-
-
-/////////////////////////////////////////
-// // set 2fa
-// set2FA(user1._id, 'dfg98');
-// console.log(user1);
-// console.log()
 
 
 // stamina data per level simulate
@@ -290,6 +272,17 @@ for (let i=0; i<10; i++){
     openBox(usersModel[user_index], newBox);
 }
 
+// fee
+for (let i=0; i<3; i++){
+    let newFee = new Fees({
+        type: i,
+        note: fee_data[i][0],
+        percentage: fee_data[i][1],
+    });
+    feesModel.push(newFee);
+}
+
+
 var adminHP = NFTsModel.filter(obj => obj.owner == admin._id && obj.nft_type == 1);
 
 
@@ -351,6 +344,69 @@ var adminHP = NFTsModel.filter(obj => obj.owner == admin._id && obj.nft_type == 
 
 
 ///////////////////////////////////////
+// // 2fa enable/disable
+let secret = enable2FA(user1);
+// console.log(user1.private)
+// console.log()
+// console.log(secret)
+// console.log()
+
+// var token = authenticator.generate(secret);
+// disable2FA(user1, token);
+// console.log(token)
+// console.log()
+
+
+
+
+/////////////////////////////////////
+// token deposit/withdraw
+console.log(`admin assets before deposit: melo: ${admin.assets[0].value} --- music: ${admin.assets[1].value}`)
+console.log(`user1 assets before deposit: melo: ${user1.assets[0].value} --- music: ${user1.assets[1].value}`)
+console.log(`user2 assets before deposit: melo: ${user2.assets[0].value} --- music: ${user2.assets[1].value}`)
+console.log()
+
+tokenDeposit(admin, 0, 97, 1000000)
+tokenDeposit(admin, 1, 97, 1000000)
+tokenDeposit(user1, 0, 97, 10000)
+tokenDeposit(user1, 1, 97, 1000)
+tokenDeposit(user2, 0, 97, 10000)
+tokenDeposit(user2, 1, 97, 1000)
+console.log(`admin assets after deposit: melo: ${admin.assets[0].value} --- music: ${admin.assets[1].value}`)
+console.log(`user1 assets after deposit: melo: ${user1.assets[0].value} --- music: ${user1.assets[1].value}`)
+console.log(`user2 assets after deposit: melo: ${user2.assets[0].value} --- music: ${user2.assets[1].value}`)
+console.log()
+
+var token = authenticator.generate(secret);
+tokenWithdraw(user1, 0, 97, 100, token)
+var token = authenticator.generate(secret);
+tokenWithdraw(user1, 1, 97, 100, token)
+
+tokenWithdraw(user2, 0, 97, 100)
+console.log(`admin assets after user1, user2 withdraw: melo: ${admin.assets[0].value} --- music ${admin.assets[1].value}`)
+console.log(`user1 assets after user1 withdraw: melo: ${user1.assets[0].value} --- music ${user1.assets[1].value}`)
+console.log(`user2 assets after user2 withdraw: melo: ${user2.assets[0].value} --- music ${user2.assets[1].value}`)
+console.log()
+
+
+
+
+/////////////////////////////////////
+// nft deposit/withdraw
+var user1NFT = NFTsModel.filter(obj => obj.owner == user1._id);
+console.log("before user1 withdraw:", user1NFT[0].owner)
+
+var token = authenticator.generate(secret);
+nftWithdraw(user1, user1NFT[0], 97, token);
+console.log("after user1 withdraw:", user1NFT[0].owner)
+
+nftDeposit(user2, user1NFT[0], 97)
+console.log("after user2 deposit:", user1NFT[0].owner)
+console.log(`admin assets after user1, user2 withdraw: melo: ${admin.assets[0].value} --- music ${admin.assets[1].value}`)
+
+
+
+///////////////////////////////////////
 // // listing item
 // var item = adminHP[0];  //nft
 // // var item = gemsModel1[1];    //gem
@@ -385,5 +441,18 @@ var adminHP = NFTsModel.filter(obj => obj.owner == admin._id && obj.nft_type == 
 
 
 
+/////////////////////////////////////////
+// // acctivation code
+// user1.staminaSpend = 15 // simulate
+// renewCode(user1);
+// renewCode(user2);
+// console.log(user1);
+// console.log()
+// console.log(user2);
+// console.log()
+// console.log(refCodesModel);
 
-export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel }
+
+
+
+export { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel, feesModel }

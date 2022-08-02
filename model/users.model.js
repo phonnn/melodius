@@ -5,7 +5,7 @@ const userSchema = new Schema({
     username: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String, required: true },
-    _2fa: { type: String },
+    private: { type: String },
     role: { type: Number, required: true },     // Admin: 0, User: 1
     stamina: { type: Number, required: true },
     maxStamina: { type: Number, required: true },
@@ -19,7 +19,7 @@ const userSchema = new Schema({
         token: { type: Number, required: true }, // MELO: 0, MUSIC: 1
         value: { type: Number, required: true },
     }],
-    addresses: [{
+    wallets: [{
         chainId: { type: Number, required: true },
         address: { type: String, required: true },
     }],

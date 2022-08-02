@@ -1,14 +1,18 @@
-import { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel } from './index.js'
+import { authenticator } from 'otplib';
+
+import { typesModel, raritiesModel, gemsModel1, gemsModel2, gemsModel3, gemsLvModel, NFTsModel, staminaModel, feesModel } from './index.js'
 import NFTs from './model/nfts.model.js';
 import Blanks from './model/blanks.model.js';
 import Listing from './model/listing.model.js';
 import Code from './model/refcode.model.js';
 import Users from './model/users.model.js';
+import Transfers from './model/transfers.model.js';
 
 // simulated database
 var listingModel = [];
 var refCodesModel = [];
 var usersModel = [];
+var transfersModel = [];
 
 function randBetween(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -261,6 +265,8 @@ function breed(user, parentNFT_1, parentNFT_2) {
         blank_slot: blankSlot,
     });
 
+    NFTsModel.push(newBox);
+
     return newBox
 }
 
@@ -460,7 +466,7 @@ function buyItem(buyer, item) {
     // find info in simulate database
     let listingInfo = listingModel.find(obj => obj.item._id == item._id);
 
-    let buyerMUSIC = buyer.assets.find(obj => obj.token == 1 && obj.chainId == item.chainId);
+    let buyerMUSIC = buyer.assets.findIndex(obj => obj.token == 1 && obj.chainId == item.chainId);
 
     let seller = listingInfo.seller;
     let sellerMUSIC = seller.assets.find(obj => obj.token == 1 && obj.chainId == item.chainId);
@@ -475,7 +481,8 @@ function buyItem(buyer, item) {
 
     // balance transfer
     buyer.assets[buyer.assets.indexOf(buyerMUSIC)].value -= listingInfo.price;
-    seller.assets[seller.assets.indexOf(sellerMUSIC)].value += (listingInfo.price * 0.98); // 2% fee
+    let fee = feesModel.find(obj => obj.type == 0);
+    seller.assets[seller.assets.indexOf(sellerMUSIC)].value += (listingInfo.price * (1 - (fee.percentage / 100))); // 2% marketplace fee
 
     // item owner transfer
     item.owner = buyer._id;
@@ -599,7 +606,7 @@ function accountCreate(username, password, email, code) {
         headphones_count: 0,
         staminaSpend: 0,
         assets: [],
-        addresses: [],
+        wallets: [],
         referrer: refCodesModel[codeCheck].owner,
     });
 
@@ -607,69 +614,260 @@ function accountCreate(username, password, email, code) {
     return newUser
 }
 
-function addAddress(userId, address, chainId) {
-    let userCheck = usersModel.findIndex(obj => obj._id == userId);
-
-    if (userCheck == -1) {
-        throw "user not exist";
-    }
-
-    let addressIndex = usersModel[userCheck].addresses.findIndex(obj => obj.chainId == chainId);
+function addWallet(user, address, chainId) {
+    let walletIndex = user.wallets.findIndex(obj => obj.chainId == chainId);
 
     // edit address
-    if (addressIndex != -1) {
-        usersModel[userCheck].addresses[addressIndex].address = address;
+    if (walletIndex != -1) {
+        user.wallets[walletIndex].address = address;
     } else {
-        usersModel[userCheck].addresses.push({
+        user.wallets.push({
             chainId: chainId,
             address: address,
         });
     }
 
-    // get address's token info from blockchain
-    // simulation info
-    let melo_info = {
-        chainId: chainId,
-        token: 0, // MELO
-        value: 1000,
-    }
-    let music_info = {
-        chainId: chainId,
-        token: 1, // MUSIC
-        value: 1000,
-    }
-    ////////////////////////////////////////////////
-
     // edit melo token info
-    let token0Index = usersModel[userCheck].assets.findIndex(obj => obj.chainId == chainId && obj.token == 0);
+    let token0Index = user.assets.findIndex(obj => obj.chainId == chainId && obj.token == 0); //simulate
 
-    if (token0Index != -1) {
-        usersModel[userCheck].assets[token0Index].value = melo_info.value;
-    } else {
-        usersModel[userCheck].assets.push(melo_info);
+    if (token0Index == -1) {
+        user.assets.push({
+            chainId: chainId,
+            token: 0, // MELO
+            value: 0,
+        });
     }
 
     // edit music token info
-    let token1Index = usersModel[userCheck].assets.findIndex(obj => obj.chainId == chainId && obj.token == 1);
-    if (token1Index != -1) {
-        usersModel[userCheck].assets[token1Index].value = music_info.value;
+    let token1Index = user.assets.findIndex(obj => obj.chainId == chainId && obj.token == 1);
+
+    if (token1Index == -1) {
+        user.assets.push({
+            chainId: chainId,
+            token: 1, // MUSIC
+            value: 0,
+        });
+    }
+}
+
+function enable2FA(user) {
+    if(user.private == undefined){
+        let secret = authenticator.generateSecret();
+        user.private = secret;
+        return secret;
     } else {
-        usersModel[userCheck].assets.push(music_info);
+        throw '2FA already enabled'
     }
 }
 
-function set2FA(userId, _2fa=undefined) {
-    let userCheck = usersModel.findIndex(obj => obj._id == userId);
+function disable2FA(user, token) { //token = 2fa token
+    // check if token is valid => disable
+    let secret = user.private;
+    let isValid = authenticator.verify({ token, secret });
 
-    if (userCheck == -1) {
-        throw "user not exist";
+    if(isValid){
+        user.private = undefined;
+        return 0;
+    } else {
+        throw 'Token not valid';
+    }
+}
+
+function check2FA(user, token=undefined) { //token = 2fa token
+    // check if 2fa is enable
+    let _private = user.private;
+
+    if(_private != undefined){
+        let isValid = authenticator.verify({
+            token: token,
+            secret: _private
+        });
+
+        if(!isValid){
+            throw 'Token not valid';
+        }
+    }
+}
+
+function commissionTo(user, tokenId, chainId, value){
+    // get referer asset info
+    let tokenIndex = user.assets.findIndex(obj => obj.chainId == chainId && obj.token == tokenId); //simulate
+
+    if(tokenIndex == -1){
+        user.assets.push({
+            chainId: chainId,
+            token: tokenId,
+            value: value,
+        })
+    } else {
+        user.assets[tokenIndex].value += value;
+    }
+}
+
+function feeTo(tokenId, chainId, value){
+    // get admin asset info
+    let admin = usersModel[0]; //simulate
+    let tokenIndex = admin.assets.findIndex(obj => obj.chainId == chainId && obj.token == tokenId); //simulate
+
+    if(tokenIndex == -1){
+        admin.assets.push({
+            chainId: chainId,
+            token: tokenId,
+            value: value,
+        })
+    } else {
+        admin.assets[tokenIndex].value += value;
+    }
+}
+
+function tokenDeposit(user, tokenId, chainId, value){ //tokenId: melo: 0, music: 1
+    let tokenIndex = user.assets.findIndex(obj => obj.chainId == chainId && obj.token == tokenId);
+
+    if(tokenIndex == -1){
+        throw "Token not found";
     }
 
-    usersModel[userCheck]._2fa = _2fa;
+    /////////////////////////////
+    //transfer token logic on blockchain
+    let onchainTranfer = true; // simulate
+    ////////////////////////////
+
+    if(onchainTranfer){
+        // change user's token value info in simulate database
+        user.assets[tokenIndex].value += value;
+
+        let walletIndex = user.wallets.findIndex(obj => obj.chainId == chainId);
+        
+        let newTransfer = new Transfers({
+            tokenType: 0,
+            id: tokenId,
+            action: 1,
+            value: value,
+            user: user,
+            chainId: chainId,
+            wallet: user.wallets[walletIndex].address,
+        });
+
+        // add transfer info into simulate database
+        transfersModel.push(newTransfer);
+    }
 }
-// if(user._2fa != undefined && user._2fa != _2fa){
-//     throw "Invalid 2FA"
-// }
+
+function tokenWithdraw(user, tokenId, chainId, value, _2faToken=undefined){ //tokenId: melo: 0, music: 1
+    check2FA(user, _2faToken);
+
+    let tokenIndex = user.assets.findIndex(obj => obj.chainId == chainId && obj.token == tokenId);
+
+    if(tokenIndex == -1){
+        throw "Token not found";
+    }
+
+    if(user.assets[tokenIndex].value < value){
+        throw "Insufficient amount";
+    }
+
+    /////////////////////////////
+    //transfer token logic on blockchain
+    let onchainTranfer = true; // simulate
+    ////////////////////////////
+
+    if(onchainTranfer){
+        // change user's token value info in simulate database
+        user.assets[tokenIndex].value -= value;
+
+        // fee and commission if not admin
+        if(user.role != 0){
+            let fee = feesModel.find(obj => obj.type == 1); 
+            let feeAmount = value * (fee.percentage / 100);
+            let userIndex = usersModel.findIndex(obj => obj._id == user.referrer)
+
+            commissionTo(usersModel[userIndex], tokenId, chainId, feeAmount/2); // 2% to ref
+            feeTo(tokenId, chainId, feeAmount/2); // 2% to admin
+        }
+
+        let walletIndex = user.wallets.findIndex(obj => obj.chainId == chainId);
+        
+        let newTransfer = new Transfers({
+            tokenType: 0,
+            id: tokenId,
+            action: 0,
+            value: value,
+            user: user,
+            chainId: chainId,
+            wallet: user.wallets[walletIndex].address,
+        });
+
+        // add transfer info into simulate database
+        transfersModel.push(newTransfer);
+    }
+}
+
+function nftDeposit(user, nft, chainId){
+    if (nft.owner != undefined) {
+        throw "NFT Error";
+    }
+
+    /////////////////////////////
+    //transfer nft logic on blockchain
+    let onchainTranfer = true; // simulate
+    ////////////////////////////
+
+    if(onchainTranfer){
+        nft.owner = user._id;
+
+        let walletIndex = user.wallets.findIndex(obj => obj.chainId == chainId);
+        
+        let newTransfer = new Transfers({
+            tokenType: 1,
+            id: nft.id,
+            action: 1,
+            value: 1,
+            user: user,
+            chainId: chainId,
+            wallet: user.wallets[walletIndex].address,
+        });
+
+        // add transfer info into simulate database
+        transfersModel.push(newTransfer);
+    }
+}
+
+function nftWithdraw(user, nft, chainId, _2faToken=undefined){
+    check2FA(user, _2faToken);
+
+    if (user._id != nft.owner) {
+        throw "Not Owner";
+    }
+
+    /////////////////////////////
+    //transfer nft logic on blockchain
+    let onchainTranfer = true; // simulate
+    ////////////////////////////
+
+    if(onchainTranfer){
+        nft.owner = undefined;
+
+        // fee and commission if not admin
+        if(user.role != 0){
+            // fee and commission transfer
+        }
+
+        let walletIndex = user.wallets.findIndex(obj => obj.chainId == chainId);
+        
+        let newTransfer = new Transfers({
+            tokenType: 1,
+            id: nft.id,
+            action: 0,
+            value: 1,
+            user: user,
+            chainId: chainId,
+            wallet: user.wallets[walletIndex].address,
+        });
+
+        // add transfer info into simulate database
+        transfersModel.push(newTransfer);
+    }
+}
 
 export {
     randBetween,
@@ -686,7 +884,13 @@ export {
     renewCodeAdmin,
     accountCreate,
     clearUsedCode,
-    addAddress,
+    addWallet,
+    enable2FA,
+    disable2FA,
+    tokenDeposit,
+    tokenWithdraw,
+    nftDeposit,
+    nftWithdraw,
     usersModel,
     refCodesModel,
     listingModel
